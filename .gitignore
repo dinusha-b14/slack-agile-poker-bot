@@ -1,0 +1,14 @@
+
+# Serverless Framework
+.serverless
+
+# DS Store
+.DS_Store
+
+# Packages
+node_modules/
+
+# Build output
+dist/
+
+

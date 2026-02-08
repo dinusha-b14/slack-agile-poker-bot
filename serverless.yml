@@ -1,0 +1,19 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: dinushab14
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: slack-agile-poker-bot
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  # Uncomment to easily set up a custom domain. Read the docs for more details:
+  # https://www.serverless.com/framework/docs/providers/aws/guide/domains
+  # domain: api.example.com
+
+functions:
+  ingress:
+    handler: dist/handlers/ingress.handler
+    events:
+      - httpApi:
+          path: /slack/commands
+          method: post
