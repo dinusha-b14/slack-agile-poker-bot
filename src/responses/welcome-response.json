@@ -1,0 +1,61 @@
+{
+  "text": "Scrum Poker started",
+  "blocks": [
+    {
+      "type": "header",
+      "text": { "type": "plain_text", "text": "🃏 Scrum Poker — Voting open" }
+    },
+    {
+      "type": "section",
+      "fields": [
+        { "type": "mrkdwn", "text": "*Facilitator:*\n{{FACILITATOR}}" },
+        { "type": "mrkdwn", "text": "*Progress:*\n{{PROGRESS}}" }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Participants:*\n{{PARTICIPANTS}}"
+      }
+    },
+    { "type": "divider" },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "action_id": "poker_reveal",
+          "text": { "type": "plain_text", "text": "Reveal votes" },
+          "style": "primary",
+          "value": "sessionId=6f7d3c4e-4b2d-4f4a-8f6b-2b6b9fbc1111"
+        },
+        {
+          "type": "button",
+          "action_id": "poker_remind",
+          "text": { "type": "plain_text", "text": "Remind remaining" },
+          "value": "sessionId=6f7d3c4e-4b2d-4f4a-8f6b-2b6b9fbc1111"
+        },
+        {
+          "type": "button",
+          "action_id": "poker_cancel",
+          "text": { "type": "plain_text", "text": "Cancel" },
+          "style": "danger",
+          "confirm": {
+            "title": { "type": "plain_text", "text": "Cancel this session?" },
+            "text": { "type": "mrkdwn", "text": "This will end voting and remove the current round." },
+            "confirm": { "type": "plain_text", "text": "Cancel session" },
+            "deny": { "type": "plain_text", "text": "Keep voting" }
+          },
+          "value": "sessionId=6f7d3c4e-4b2d-4f4a-8f6b-2b6b9fbc1111"
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "elements": [
+        { "type": "mrkdwn", "text": "Votes are hidden until reveal. Participants receive an ephemeral voting prompt." }
+      ]
+    }
+  ]
+}

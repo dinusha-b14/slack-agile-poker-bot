@@ -47,6 +47,7 @@ functions:
     handler: dist/handlers/worker.handler
     environment:
       SCRUM_POKER_TABLE_NAME: ${self:service}-scrum-poker-table
+      SLACK_BOT_TOKEN: ${ssm:/slack-bot-token}
     events:
       - sqs:
           arn:
