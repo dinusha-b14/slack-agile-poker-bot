@@ -1,20 +1,12 @@
 import pino from 'pino';
 import type { APIGatewayEvent } from 'aws-lambda';
 import verifyRequest from '../services/verify';
+import { extractDataFromEvent, parseRequestBody } from '../services/requests';
 
-export async function handler(event: APIGatewayEvent) {
+export async function ingressHandler(event: APIGatewayEvent) {
   const logger = pino();
 
-  const headers = Object.fromEntries(
-    Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
-  );
-
-  const isBase64Encoded = event.isBase64Encoded ?? false;
-  const timestamp = headers['x-slack-request-timestamp'] || '';
-  const signature = headers['x-slack-signature'] || '';
-  const requestBody = isBase64Encoded
-    ? Buffer.from(event.body ?? '', 'base64').toString('utf-8')
-    : event.body ?? '';
+  const { timestamp, signature, requestBody } = extractDataFromEvent(event);
 
   if (!verifyRequest(requestBody, process.env.SLACK_SIGNING_SECRET || '', timestamp, signature)) {
     logger.error('Request verification failed');
@@ -25,6 +17,10 @@ export async function handler(event: APIGatewayEvent) {
   }
 
   logger.info('Request verified successfully');
+
+  const jsonBody = parseRequestBody(requestBody);
+
+  logger.info(`Parsed request body: ${JSON.stringify(jsonBody)}`);
 
   return { statusCode: 200 };
 }

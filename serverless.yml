@@ -14,7 +14,7 @@ provider:
 
 functions:
   ingress:
-    handler: dist/handlers/ingress.handler
+    handler: dist/handlers/ingress.ingressHandler
     environment:
       SLACK_SIGNING_SECRET: ${ssm:/slack-signing-secret}
     events:
