@@ -11,13 +11,40 @@ provider:
   # Uncomment to easily set up a custom domain. Read the docs for more details:
   # https://www.serverless.com/framework/docs/providers/aws/guide/domains
   # domain: api.example.com
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "sqs:SendMessage"
+          Resource:
+            - Fn::GetAtt: [SlackIngressQueue, Arn]
 
 functions:
   ingress:
-    handler: dist/handlers/ingress.ingressHandler
+    handler: dist/handlers/ingress.handler
     environment:
       SLACK_SIGNING_SECRET: ${ssm:/slack-signing-secret}
+      SLACK_INGRESS_QUEUE_URL:
+        Ref: SlackIngressQueue
     events:
       - httpApi:
           path: /slack/commands
           method: post
+  worker:
+    handler: dist/handlers/worker.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [SlackIngressQueue, Arn]
+          batchSize: 10
+          maximumBatchingWindow: 30
+
+resources:
+  Resources:
+    SlackIngressQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: slack-ingress-queue
+        VisibilityTimeout: 30
+        MessageRetentionPeriod: 345600 # 4 days in seconds
