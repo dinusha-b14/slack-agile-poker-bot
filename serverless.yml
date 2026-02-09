@@ -16,7 +16,7 @@ functions:
   ingress:
     handler: dist/handlers/ingress.handler
     environment:
-      SLACK_SIGNING_SECRET: ${ssm:/slack-agile-poker-bot/slack-signing-secret~true}
+      SLACK_SIGNING_SECRET: ${ssm:/slack-signing-secret}
     events:
       - httpApi:
           path: /slack/commands

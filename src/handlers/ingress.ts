@@ -5,9 +5,13 @@ import verifyRequest from '../services/verify';
 export async function handler(event: APIGatewayEvent) {
   const logger = pino();
 
+  const headers = Object.fromEntries(
+    Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
+  );
+
   const isBase64Encoded = event.isBase64Encoded ?? false;
-  const timestamp = event.headers['X-Slack-Request-Timestamp'] || '';
-  const signature = event.headers['X-Slack-Signature'] || '';
+  const timestamp = headers['x-slack-request-timestamp'] || '';
+  const signature = headers['x-slack-signature'] || '';
   const requestBody = isBase64Encoded
     ? Buffer.from(event.body ?? '', 'base64').toString('utf-8')
     : event.body ?? '';

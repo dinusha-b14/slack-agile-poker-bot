@@ -1,15 +1,17 @@
 import crypto from 'crypto';
 
 export default function verifyRequest(requestBody: string, signingSecret: string, timestamp: string, signature: string): boolean {
-  if (new Date().getTime() / 1000 - parseInt(timestamp) > 60 * 5) {
-    // Request is older than 5 minutes, possible replay attack
+  if (Date.now() / 1000 - parseInt(timestamp, 10) > 60 * 5) {
     return false;
   }
 
   const baseString = `v0:${timestamp}:${requestBody}`;
-  const hmac = crypto.createHmac('sha256', signingSecret);
-  hmac.update(baseString);
-  const computedSignature = `v0=${hmac.digest('hex')}`;
+  const computedSignature = `v0=${crypto.createHmac("sha256", signingSecret).update(baseString, "utf8").digest("hex")}`;
 
-  return crypto.timingSafeEqual(Buffer.from(computedSignature), Buffer.from(signature));
+  if (computedSignature.length !== signature.length) return false;
+
+  return crypto.timingSafeEqual(
+    Buffer.from(computedSignature, "utf8"),
+    Buffer.from(signature, "utf8")
+  );
 }
