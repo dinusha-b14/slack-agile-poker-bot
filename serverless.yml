@@ -1,3 +1,5 @@
+# "app" specifies the runtime and entry point of your Lambda function.
+app: slack-agile-poker-bot
 # "org" ensures this Service is used with the correct Serverless Framework Access Key.
 org: dinushab14
 # "service" is the name of this project. This will also be added to your AWS resource names.
