@@ -1,0 +1,25 @@
+{
+  "text": "Scrum Poker results",
+  "blocks": [
+    {
+      "type": "header",
+      "text": { "type": "plain_text", "text": "🃏 Scrum Poker Results 🃏" }
+    },
+    {
+      "type": "section",
+      "fields": [
+        { "type": "mrkdwn", "text": "*Facilitator:*\n{{{FACILITATOR}}}" }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Votes:*"
+      }
+    }
+  ]
+}

@@ -3,10 +3,10 @@ import { ulid } from 'ulid';
 import type { APIGatewayEvent } from 'aws-lambda';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+import Handlebars from 'handlebars';
 import verifyRequest from '../services/verify';
 import { parseRequestBody } from '../services/requests';
 import { docClient } from '../db/dynamo-client';
-import { SlackTemplate } from '../services/slack-template';
 import welcomeMessageTemplate from '../responses/welcome-response.json';
 import { SlackApiResponseBody } from '../common/types';
 
@@ -70,14 +70,14 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
   const sessionId = ulid();
 
   // Render welcome message using template
-  const { text, blocks } = welcomeMessageTemplate as Record<string, any>;
-  const template = new SlackTemplate(blocks);
-  const renderedBlocks = template.render({
+  const template = Handlebars.compile(JSON.stringify(welcomeMessageTemplate));
+  const renderedMessage = template({
     FACILITATOR: `<@${slackRequest.userId}>`,
-    PROGRESS: `0/${userIds.length} voted`,
     PARTICIPANTS: userIds.map(id => `<@${id}>`).join('\n'),
     SESSION_ID: sessionId,
   });
+
+  const { text, blocks: renderedBlocks } = JSON.parse(renderedMessage) as { text: string; blocks: any[] };
 
   // Send message to facilitator
   const response = await fetch(`${process.env.SLACK_API_BASE_URL}/chat.postMessage`, {

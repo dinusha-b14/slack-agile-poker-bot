@@ -8,15 +8,14 @@
     {
       "type": "section",
       "fields": [
-        { "type": "mrkdwn", "text": "*Facilitator:*\n{{FACILITATOR}}" },
-        { "type": "mrkdwn", "text": "*Progress:*\n{{PROGRESS}}" }
+        { "type": "mrkdwn", "text": "*Facilitator:*\n{{{FACILITATOR}}}" }
       ]
     },
     {
       "type": "section",
       "text": {
         "type": "mrkdwn",
-        "text": "*Participants:*\n{{PARTICIPANTS}}"
+        "text": "*Participants:*\n{{{PARTICIPANTS}}}"
       }
     },
     { "type": "divider" },

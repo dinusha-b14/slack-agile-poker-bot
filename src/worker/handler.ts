@@ -1,8 +1,8 @@
 import pino from 'pino';
 import { SNSEvent } from 'aws-lambda';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
+import Handlebars from 'handlebars';
 import participantVoteMessageTemplate from '../responses/participant-vote-message.json';
-import { SlackTemplate } from '../services/slack-template';
 import { docClient } from '../db/dynamo-client';
 
 
@@ -27,13 +27,14 @@ export async function handler(event: SNSEvent) {
     if (slackMessage.type === 'PROMPT_VOTE') {
       logger.info(`Processing PROMPT_VOTE for user ${slackMessage.userId} in channel ${slackMessage.channelId}`);
 
-      const { blocks } = participantVoteMessageTemplate as Record<string, any>;
-      const template = new SlackTemplate(blocks);
-      const renderedBlocks = template.render({
+      const template = Handlebars.compile(JSON.stringify(participantVoteMessageTemplate));
+      const renderedMessage = template({
         TEAM_ID: slackMessage.teamId,
         CHANNEL_ID: slackMessage.channelId,
         SESSION_ID: slackMessage.sessionId,
       });
+
+      const { blocks: renderedBlocks } = JSON.parse(renderedMessage) as Record<string, any>;
 
       const response = await fetch(`${process.env.SLACK_API_BASE_URL}/chat.postMessage`, {
         method: 'POST',

@@ -1,9 +1,11 @@
-import { GetCommand, PutCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayEvent } from 'aws-lambda';
 import pino from 'pino';
+import Handlebars from 'handlebars';
 import { docClient } from '../db/dynamo-client';
 import { parseRequestBody } from '../services/requests';
 import verifyRequest from '../services/verify';
+import pokerResultsTemplate from '../responses/poker-results.json';
 
 type SlackInteractionRequest = {
   type: string;
@@ -221,6 +223,82 @@ async function handleVote(userChannelId: string,userId: string, value: string | 
   });
 
   logger.info(`Vote for session ${sessionId} recorded successfully`);
+
+  // Optionally, you can also check if all participants have voted and update the message to show results or next steps
+  const sessionRecord = await docClient.send(new GetCommand({
+    TableName: process.env.SCRUM_POKER_TABLE_NAME,
+    Key: {
+      PK: `TEAM#${teamId}#CHANNEL#${channelId}`,
+      SK: `SESSION#${sessionId}`,
+    },
+  }));
+
+  if (!sessionRecord.Item) {
+    logger.error(`Session record not found for session ${sessionId}`);
+    return { statusCode: 200 };
+  }
+
+  const participantCount = sessionRecord.Item.participantIds.length;
+  const votedParticipants = await docClient.send(new QueryCommand({
+    TableName: process.env.SCRUM_POKER_TABLE_NAME,
+    KeyConditionExpression: 'PK = :pk and begins_with(SK, :skPrefix)',
+    ExpressionAttributeValues: {
+      ':pk': `TEAM#${teamId}#CHANNEL#${channelId}#SESSION#${sessionId}`,
+      ':skPrefix': 'PARTICIPANT#',
+    },
+  }));
+
+  if (votedParticipants.Items && votedParticipants.Items.length === participantCount) {
+    logger.info(`All participants have voted in session ${sessionId}. Updating message to show results.`);
+
+    const template = Handlebars.compile(JSON.stringify(pokerResultsTemplate));
+    const renderedMessage = template({
+      FACILITATOR: `<@${sessionRecord.Item.facilitatorId}>`,
+    });
+
+    logger.info(`Rendered poker results message: ${renderedMessage}`);
+
+    const { text, blocks } = JSON.parse(renderedMessage) as Record<string, any>;
+
+    const renderedBlocks = [
+      ...blocks,
+      {
+        type: 'section',
+        fields: votedParticipants.Items.map((participant) => ({
+          type: 'mrkdwn',
+          text: `<@${participant.SK.split('#')[1]}>: ${participant.vote}`,
+        })),
+      },
+    ];
+
+    logger.info(`Rendered message blocks: ${JSON.stringify(renderedBlocks)}`);
+
+    await fetch(`${process.env.SLACK_API_BASE_URL}/chat.update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`
+      },
+      body: JSON.stringify({
+        channel: channelId,
+        ts: sessionRecord.Item.messageTs,
+        text,
+        blocks: renderedBlocks,
+      }),
+    });
+
+    // Update session status to 'COMPLETED'
+    await docClient.send(new PutCommand({
+      TableName: process.env.SCRUM_POKER_TABLE_NAME,
+      Item: {
+        ...sessionRecord.Item,
+        status: 'COMPLETED',
+        revealedAt: new Date().toISOString(),
+      },
+    }));
+
+    logger.info(`Session ${sessionId} marked as COMPLETED`);
+  }
 
   return { statusCode: 200 };
 }
