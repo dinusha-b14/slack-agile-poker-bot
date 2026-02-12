@@ -2,12 +2,13 @@ import pino from 'pino';
 import { ulid } from 'ulid';
 import type { APIGatewayEvent } from 'aws-lambda';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
+import { SQS, SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import verifyRequest from '../services/verify';
 import { parseRequestBody } from '../services/requests';
 import { docClient } from '../db/dynamo-client';
 import { SlackTemplate } from '../services/slack-template';
 import welcomeMessageTemplate from '../responses/welcome-response.json';
-import { SQS, SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
+import { SlackApiResponseBody } from '../common/types';
 
 type SlackCommandRequest = {
   token: string;
@@ -25,13 +26,6 @@ type SlackCommandRequest = {
 
 type SlackCommandResponse = {
   statusCode: number;
-}
-
-type SlackApiResponseBody = {
-  ok: boolean;
-  ts: string;
-  channel: string;
-  [key: string]: any;
 }
 
 export async function handler(event: APIGatewayEvent): Promise<SlackCommandResponse> {
@@ -86,7 +80,7 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
   });
 
   // Send response back to Slack
-  const response = await fetch(`${process.env.SLACK_API_BASE_URL}/chat.postMessage`, {
+  const response = await fetch(`${process.env.SLACK_API_BASE_URL}/chat.postEphemeral`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -94,6 +88,7 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
     },
     body: JSON.stringify({
       channel: slackRequest.channelId,
+      user: slackRequest.userId,
       text,
       blocks: renderedBlocks,
     }),
@@ -104,8 +99,10 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
   logger.info(`Sent response to Slack. Response from Slack was: ${JSON.stringify(jsonResponseData)}`);
 
   // Queue messages for each participant to prompt them to vote
-  for (const userId of userIds) {
+  await Promise.all(userIds.map(async (rawUserId) => {
     const sqs = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
+    const userId = rawUserId.split('|')[0]; // Extract user ID from mention format
+
     await sqs.send(new SendMessageCommand({
       QueueUrl: process.env.SLACK_PARTICIPANTS_QUEUE_URL,
       MessageBody: JSON.stringify({
@@ -117,7 +114,7 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
         responseUrl: slackRequest.responseUrl,
       }),
     }));
-  }
+  }));
 
   // Create session data to store in DB
   const sessionData = {
