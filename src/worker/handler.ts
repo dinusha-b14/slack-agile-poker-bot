@@ -30,6 +30,8 @@ export async function handler(event: SQSEvent) {
       const { blocks } = participantVoteMessageTemplate as Record<string, any>;
       const template = new SlackTemplate(blocks);
       const renderedBlocks = template.render({
+        TEAM_ID: slackMessage.teamId,
+        CHANNEL_ID: slackMessage.channelId,
         SESSION_ID: slackMessage.sessionId,
       });
 
@@ -58,6 +60,7 @@ export async function handler(event: SQSEvent) {
         PK: `TEAM#${slackMessage.teamId}#CHANNEL#${slackMessage.channelId}#SESSION#${slackMessage.sessionId}`,
         SK: `PARTICIPANT#${slackMessage.userId}`,
         status: 'PROMPTED',
+        messageTs: jsonResponseData.ts,
       };
 
       await docClient.send(new PutCommand({

@@ -1,9 +1,10 @@
-import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayEvent } from 'aws-lambda';
 import pino from 'pino';
 import { docClient } from '../db/dynamo-client';
 import { parseRequestBody } from '../services/requests';
 import verifyRequest from '../services/verify';
+import { log } from 'node:console';
 
 type SlackInteractionRequest = {
   type: string;
@@ -64,8 +65,11 @@ async function handleInteraction(slackInteractionRequest: SlackInteractionReques
   const action = actions[0]?.action_id;
   const value = actions[0]?.value;
 
-  switch (action) {
-    case 'poker_cancel':
+  switch (true) {
+    case action.startsWith('poker_vote'):
+      logger.info(`Handling vote action for user with ID ${userId}`);
+      return handleVote(channelId, userId, value, responseUrl, logger);
+    case action.startsWith('poker_cancel'):
       logger.info(`Handling cancel action for session ${value}`);
       return cancelSession(teamId, channelId, value, responseUrl, logger);
     default:
@@ -111,6 +115,27 @@ async function cancelSession(teamId: string, channelId: string, sessionId: strin
     },
   }));
 
+  // Find all user records for this session and update their status to 'CANCELLED' (optional, depending on your implementation)
+  const userRecords = await docClient.send(new QueryCommand({
+    TableName: process.env.SCRUM_POKER_TABLE_NAME,
+    KeyConditionExpression: 'PK = :pk and begins_with(SK, :skPrefix)',
+    ExpressionAttributeValues: {
+      ':pk': `TEAM#${teamId}#CHANNEL#${channelId}#SESSION#${sessionId}`,
+      ':skPrefix': 'PARTICIPANT#',
+    },
+  }));
+
+  for (const userRecord of userRecords.Items || []) {
+    await docClient.send(new PutCommand({
+      TableName: process.env.SCRUM_POKER_TABLE_NAME,
+      Item: {
+        ...userRecord,
+        status: 'CANCELLED',
+        cancelledAt: new Date().toISOString(),
+      },
+    }));
+  }
+
   await fetch(responseUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -121,6 +146,68 @@ async function cancelSession(teamId: string, channelId: string, sessionId: strin
   });
 
   logger.info(`Session ${sessionId} cancelled successfully`);
+
+  return { statusCode: 200 };
+}
+
+async function handleVote(userChannelId: string,userId: string, value: string | undefined, responseUrl: string, logger: pino.Logger) {
+  // Parse the button value to extract sessionId, teamId, and channelId
+  const { sessionId, teamId, channelId, vote } = JSON.parse(value || '{}');
+  const voteNumber = parseInt(vote || '', 10);
+
+  logger.info(`Handling vote for user ${userId} in session ${sessionId} with vote value ${vote}`);
+
+  // Update vote in DB
+  const userVoteRecord = await docClient.send(new GetCommand({
+    TableName: process.env.SCRUM_POKER_TABLE_NAME,
+    Key: {
+      PK: `TEAM#${teamId}#CHANNEL#${channelId}#SESSION#${sessionId}`,
+      SK: `PARTICIPANT#${userId}`,
+    },
+  }));
+
+  if (!userVoteRecord.Item) {
+    logger.error(`User vote record not found for user ${userId} in session ${sessionId}`);
+    await fetch(responseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        replace_original: false,
+      }),
+    });
+
+    return { statusCode: 200 };
+  }
+
+  await docClient.send(new PutCommand({
+    TableName: process.env.SCRUM_POKER_TABLE_NAME,
+    Item: {
+      ...userVoteRecord.Item,
+      vote: voteNumber,
+      votedAt: new Date().toISOString(),
+      status: 'VOTED',
+    },
+  }));
+
+  const messageTs = userVoteRecord.Item.messageTs;
+
+  logger.info(`Original message timestamp: ${messageTs}, channel ID: ${channelId}`);
+
+  // Optionally, you can update the original message to reflect that the user has voted (e.g., by adding a checkmark next to their name)
+  await fetch(`${process.env.SLACK_API_BASE_URL}/chat.update`, {
+    method: 'POST',
+    headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`
+    },
+    body: JSON.stringify({
+      channel: userChannelId,
+      ts: messageTs,
+      text: `Your vote of ${vote} has been recorded.`,
+    }),
+  });
+
+  logger.info(`Vote for session ${sessionId} recorded successfully`);
 
   return { statusCode: 200 };
 }

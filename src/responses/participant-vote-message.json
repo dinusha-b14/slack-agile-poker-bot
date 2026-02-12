@@ -23,51 +23,33 @@
       "elements": [
         {
           "type": "button",
-          "text": { "type": "plain_text", "text": "0" },
-          "value": "{{SESSION_ID}}",
-          "action_id": "poker_vote_0"
-        },
-        {
-          "type": "button",
           "text": { "type": "plain_text", "text": "1" },
-          "value": "{{SESSION_ID}}",
+          "value": "{\"sessionId\":\"{{SESSION_ID}}\",\"teamId\":\"{{TEAM_ID}}\",\"channelId\":\"{{CHANNEL_ID}}\",\"vote\":\"1\"}",
           "action_id": "poker_vote_1"
         },
         {
           "type": "button",
           "text": { "type": "plain_text", "text": "2" },
-          "value": "{{SESSION_ID}}",
+          "value": "{\"sessionId\":\"{{SESSION_ID}}\",\"teamId\":\"{{TEAM_ID}}\",\"channelId\":\"{{CHANNEL_ID}}\",\"vote\":\"2\"}",
           "action_id": "poker_vote_2"
         },
         {
           "type": "button",
           "text": { "type": "plain_text", "text": "3" },
-          "value": "{{SESSION_ID}}",
+          "value": "{\"sessionId\":\"{{SESSION_ID}}\",\"teamId\":\"{{TEAM_ID}}\",\"channelId\":\"{{CHANNEL_ID}}\",\"vote\":\"3\"}",
           "action_id": "poker_vote_3"
         },
         {
           "type": "button",
           "text": { "type": "plain_text", "text": "5" },
-          "value": "{{SESSION_ID}}",
+          "value": "{\"sessionId\":\"{{SESSION_ID}}\",\"teamId\":\"{{TEAM_ID}}\",\"channelId\":\"{{CHANNEL_ID}}\",\"vote\":\"5\"}",
           "action_id": "poker_vote_5"
-        }
-      ]
-    },
-    {
-      "type": "actions",
-      "block_id": "vote_row_2",
-      "elements": [
-        {
-          "type": "button",
-          "text": { "type": "plain_text", "text": "8" },
-          "value": "{{SESSION_ID}}",
-          "action_id": "poker_vote_8"
         },
         {
           "type": "button",
-          "text": { "type": "plain_text", "text": "?" },
-          "value": "{{SESSION_ID}}",
-          "action_id": "poker_vote_question_mark"
+          "text": { "type": "plain_text", "text": "8" },
+          "value": "{\"sessionId\":\"{{SESSION_ID}}\",\"teamId\":\"{{TEAM_ID}}\",\"channelId\":\"{{CHANNEL_ID}}\",\"vote\":\"8\"}",
+          "action_id": "poker_vote_8"
         }
       ]
     }
