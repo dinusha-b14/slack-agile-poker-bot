@@ -25,19 +25,6 @@
       "elements": [
         {
           "type": "button",
-          "action_id": "poker_reveal",
-          "text": { "type": "plain_text", "text": "Reveal votes" },
-          "style": "primary",
-          "value": "{{SESSION_ID}}"
-        },
-        {
-          "type": "button",
-          "action_id": "poker_remind",
-          "text": { "type": "plain_text", "text": "Remind remaining" },
-          "value": "{{SESSION_ID}}"
-        },
-        {
-          "type": "button",
           "action_id": "poker_cancel",
           "text": { "type": "plain_text", "text": "Cancel" },
           "style": "danger",

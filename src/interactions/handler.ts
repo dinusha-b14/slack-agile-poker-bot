@@ -70,14 +70,14 @@ async function handleInteraction(slackInteractionRequest: SlackInteractionReques
       return handleVote(channelId, userId, value, responseUrl, logger);
     case action.startsWith('poker_cancel'):
       logger.info(`Handling cancel action for session ${value}`);
-      return cancelSession(teamId, channelId, value, responseUrl, logger);
+      return cancelSession(teamId, channelId, value, userId, responseUrl, logger);
     default:
       logger.warn(`Unknown action: ${action}`);
       return { statusCode: 200 };
   }
 }
 
-async function cancelSession(teamId: string, channelId: string, sessionId: string, responseUrl: string, logger: pino.Logger) {
+async function cancelSession(teamId: string, channelId: string, sessionId: string, userId: string, responseUrl: string, logger: pino.Logger) {
   logger.info(`Cancelling session ${sessionId}`);
   // Update session status in DB to 'CANCELLED'
   const sessionRecord = await docClient.send(new GetCommand({
@@ -97,6 +97,20 @@ async function cancelSession(teamId: string, channelId: string, sessionId: strin
       body: JSON.stringify({
         replace_original: true,
         text: `Poker session has been cancelled.`,
+      }),
+    });
+
+    return { statusCode: 200 };
+  }
+
+  if (sessionRecord.Item.facilitatorId !== userId) {
+    logger.warn(`User ${userId} is not the facilitator of session ${sessionId} and cannot cancel it`);
+    await fetch(responseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        replace_original: false,
+        text: `Only the facilitator can cancel this poker session.`,
       }),
     });
 

@@ -79,8 +79,8 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
     SESSION_ID: sessionId,
   });
 
-  // Send response back to Slack
-  const response = await fetch(`${process.env.SLACK_API_BASE_URL}/chat.postEphemeral`, {
+  // Send message to facilitator
+  const response = await fetch(`${process.env.SLACK_API_BASE_URL}/chat.postMessage`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -88,7 +88,6 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
     },
     body: JSON.stringify({
       channel: slackRequest.channelId,
-      user: slackRequest.userId,
       text,
       blocks: renderedBlocks,
     }),
@@ -124,7 +123,7 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
     startedAt: new Date().toISOString(),
     facilitatorId: slackRequest.userId,
     participantIds: userIds,
-    slackMessageTs: jsonResponseData.ts,
+    messageTs: jsonResponseData.ts,
   };
 
   await docClient.send(new PutCommand({
