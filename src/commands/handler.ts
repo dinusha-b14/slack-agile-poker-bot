@@ -2,7 +2,7 @@ import pino from 'pino';
 import { ulid } from 'ulid';
 import type { APIGatewayEvent } from 'aws-lambda';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
-import { SQS, SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import verifyRequest from '../services/verify';
 import { parseRequestBody } from '../services/requests';
 import { docClient } from '../db/dynamo-client';
@@ -100,12 +100,12 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
 
   // Queue messages for each participant to prompt them to vote
   await Promise.all(userIds.map(async (rawUserId) => {
-    const sqs = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
+    const sns = new SNSClient({ region: process.env.AWS_REGION || 'us-east-1' });
     const userId = rawUserId.split('|')[0]; // Extract user ID from mention format
 
-    await sqs.send(new SendMessageCommand({
-      QueueUrl: process.env.SLACK_PARTICIPANTS_QUEUE_URL,
-      MessageBody: JSON.stringify({
+    await sns.send(new PublishCommand({
+      TopicArn: process.env.SLACK_PARTICIPANTS_TOPIC_ARN,
+      Message: JSON.stringify({
         type: 'PROMPT_VOTE',
         teamId: slackRequest.teamId,
         channelId: slackRequest.channelId,

@@ -4,7 +4,6 @@ import pino from 'pino';
 import { docClient } from '../db/dynamo-client';
 import { parseRequestBody } from '../services/requests';
 import verifyRequest from '../services/verify';
-import { log } from 'node:console';
 
 type SlackInteractionRequest = {
   type: string;

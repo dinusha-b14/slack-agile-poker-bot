@@ -1,5 +1,5 @@
 import pino from 'pino';
-import { SQSEvent } from 'aws-lambda';
+import { SNSEvent } from 'aws-lambda';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import participantVoteMessageTemplate from '../responses/participant-vote-message.json';
 import { SlackTemplate } from '../services/slack-template';
@@ -15,11 +15,11 @@ type SlackWorkerMessage = {
   responseUrl: string;
 }
 
-export async function handler(event: SQSEvent) {
+export async function handler(event: SNSEvent) {
   const logger = pino();
 
   for (const record of event.Records) {
-    const message = JSON.parse(record.body);
+    const message = JSON.parse(record.Sns.Message);
     logger.info(`Received message: ${JSON.stringify(message)}`);
 
     const slackMessage = message as SlackWorkerMessage;

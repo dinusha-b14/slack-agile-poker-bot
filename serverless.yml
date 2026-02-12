@@ -13,16 +13,16 @@ provider:
     SCRUM_POKER_TABLE_NAME: ${self:service}-scrum-poker-table
     SLACK_BOT_TOKEN: ${ssm:/slack-bot-token}
     SLACK_API_BASE_URL: https://slack.com/api
-    SLACK_PARTICIPANTS_QUEUE_URL:
-      Ref: SlackParticipantsQueue
+    SLACK_PARTICIPANTS_TOPIC_ARN:
+      Ref: ScrumPokerParticipantsTopic
   iam:
     role:
       statements:
-        - Effect: "Allow"
+        - Effect: Allow
           Action:
-            - "sqs:SendMessage"
+            - sns:Publish
           Resource:
-            - Fn::GetAtt: [SlackParticipantsQueue, Arn]
+            Ref: ScrumPokerParticipantsTopic
         - Effect: Allow
           Action:
             - dynamodb:GetItem
@@ -52,20 +52,17 @@ functions:
   worker:
     handler: dist/worker/handler.handler
     events:
-      - sqs:
+      - sns:
           arn:
-            Fn::GetAtt: [SlackParticipantsQueue, Arn]
-          batchSize: 10
-          maximumBatchingWindow: 30
+            Ref: ScrumPokerParticipantsTopic
+          topicName: scrum-poker-participants-topic
 
 resources:
   Resources:
-    SlackParticipantsQueue:
-      Type: AWS::SQS::Queue
+    ScrumPokerParticipantsTopic:
+      Type: AWS::SNS::Topic
       Properties:
-        QueueName: slack-participants-queue
-        VisibilityTimeout: 30
-        MessageRetentionPeriod: 345600 # 4 days in seconds
+        TopicName: scrum-poker-participants-topic
     ScrumPokerTable:
       Type: AWS::DynamoDB::Table
       Properties:
