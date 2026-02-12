@@ -8,9 +8,13 @@ service: slack-agile-poker-bot
 provider:
   name: aws
   runtime: nodejs20.x
-  # Uncomment to easily set up a custom domain. Read the docs for more details:
-  # https://www.serverless.com/framework/docs/providers/aws/guide/domains
-  # domain: api.example.com
+  environment:
+    SLACK_SIGNING_SECRET: ${ssm:/slack-signing-secret}
+    SCRUM_POKER_TABLE_NAME: ${self:service}-scrum-poker-table
+    SLACK_BOT_TOKEN: ${ssm:/slack-bot-token}
+    SLACK_API_BASE_URL: https://slack.com/api
+    SLACK_PARTICIPANTS_QUEUE_URL:
+      Ref: SlackParticipantsQueue
   iam:
     role:
       statements:
@@ -18,7 +22,7 @@ provider:
           Action:
             - "sqs:SendMessage"
           Resource:
-            - Fn::GetAtt: [SlackIngressQueue, Arn]
+            - Fn::GetAtt: [SlackParticipantsQueue, Arn]
         - Effect: Allow
           Action:
             - dynamodb:GetItem
@@ -29,44 +33,43 @@ provider:
             - dynamodb:Scan
             - dynamodb:TransactWriteItems
           Resource:
-            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:functions.worker.environment.SCRUM_POKER_TABLE_NAME}
-            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:functions.worker.environment.SCRUM_POKER_TABLE_NAME}/index/*
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.SCRUM_POKER_TABLE_NAME}
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.SCRUM_POKER_TABLE_NAME}/index/*
 
 functions:
-  ingress:
-    handler: dist/handlers/ingress.handler
-    environment:
-      SLACK_SIGNING_SECRET: ${ssm:/slack-signing-secret}
-      SLACK_INGRESS_QUEUE_URL:
-        Ref: SlackIngressQueue
+  commands:
+    handler: dist/commands/handler.handler
     events:
       - httpApi:
           path: /slack/commands
           method: post
+  interactions:
+    handler: dist/interactions/handler.handler
+    events:
+      - httpApi:
+          path: /slack/interactions
+          method: post
   worker:
-    handler: dist/handlers/worker.handler
-    environment:
-      SCRUM_POKER_TABLE_NAME: ${self:service}-scrum-poker-table
-      SLACK_BOT_TOKEN: ${ssm:/slack-bot-token}
+    handler: dist/worker/handler.handler
     events:
       - sqs:
           arn:
-            Fn::GetAtt: [SlackIngressQueue, Arn]
+            Fn::GetAtt: [SlackParticipantsQueue, Arn]
           batchSize: 10
           maximumBatchingWindow: 30
 
 resources:
   Resources:
-    SlackIngressQueue:
+    SlackParticipantsQueue:
       Type: AWS::SQS::Queue
       Properties:
-        QueueName: slack-ingress-queue
+        QueueName: slack-participants-queue
         VisibilityTimeout: 30
         MessageRetentionPeriod: 345600 # 4 days in seconds
     ScrumPokerTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:functions.worker.environment.SCRUM_POKER_TABLE_NAME}
+        TableName: ${self:provider.environment.SCRUM_POKER_TABLE_NAME}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: PK

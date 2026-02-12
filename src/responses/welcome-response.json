@@ -28,13 +28,13 @@
           "action_id": "poker_reveal",
           "text": { "type": "plain_text", "text": "Reveal votes" },
           "style": "primary",
-          "value": "sessionId=6f7d3c4e-4b2d-4f4a-8f6b-2b6b9fbc1111"
+          "value": "{{SESSION_ID}}"
         },
         {
           "type": "button",
           "action_id": "poker_remind",
           "text": { "type": "plain_text", "text": "Remind remaining" },
-          "value": "sessionId=6f7d3c4e-4b2d-4f4a-8f6b-2b6b9fbc1111"
+          "value": "{{SESSION_ID}}"
         },
         {
           "type": "button",
@@ -47,7 +47,7 @@
             "confirm": { "type": "plain_text", "text": "Cancel session" },
             "deny": { "type": "plain_text", "text": "Keep voting" }
           },
-          "value": "sessionId=6f7d3c4e-4b2d-4f4a-8f6b-2b6b9fbc1111"
+          "value": "{{SESSION_ID}}"
         }
       ]
     },
