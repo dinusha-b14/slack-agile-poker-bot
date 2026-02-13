@@ -65,7 +65,9 @@ export async function handler(event: APIGatewayEvent): Promise<SlackCommandRespo
 async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pino.Logger) {
   // Extract users from text (e.g., "/poker @user1 @user2")
   const userMentions = slackRequest.text.match(/<@([A-Z0-9]+)\|[^>]+>/g) || [];
-  const userIds = userMentions.map(mention => mention.replace(/[<@>]/g, ''));
+  const userIds = userMentions.map(mention => mention.replace(/[<@>]/g, '').split('|')[0]); // Extract user ID from mention format
+
+  logger.info(`Extracted user IDs from command text: ${userIds.join(', ')}`);
 
   const sessionId = ulid();
 
@@ -73,9 +75,11 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
   const template = Handlebars.compile(JSON.stringify(welcomeMessageTemplate));
   const renderedMessage = template({
     FACILITATOR: `<@${slackRequest.userId}>`,
-    PARTICIPANTS: userIds.map(id => `<@${id}>`).join('\n'),
+    PARTICIPANTS: userIds.map(id => `<@${id}>`).join('\\n'),
     SESSION_ID: sessionId,
   });
+
+  logger.info(`Rendered welcome message: ${renderedMessage}`);
 
   const { text, blocks: renderedBlocks } = JSON.parse(renderedMessage) as { text: string; blocks: any[] };
 
@@ -98,9 +102,8 @@ async function handleSlashCommand(slackRequest: SlackCommandRequest, logger: pin
   logger.info(`Sent response to Slack. Response from Slack was: ${JSON.stringify(jsonResponseData)}`);
 
   // Queue messages for each participant to prompt them to vote
-  await Promise.all(userIds.map(async (rawUserId) => {
+  await Promise.all(userIds.map(async (userId) => {
     const sns = new SNSClient({ region: process.env.AWS_REGION || 'us-east-1' });
-    const userId = rawUserId.split('|')[0]; // Extract user ID from mention format
 
     await sns.send(new PublishCommand({
       TopicArn: process.env.SLACK_PARTICIPANTS_TOPIC_ARN,
